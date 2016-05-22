@@ -4,7 +4,7 @@
 #
 #
 
-import math, os, pickle, re
+import math, os, pickle, re, nltk
 from random import shuffle
 
 class Bayes_Classifier:
@@ -18,13 +18,19 @@ class Bayes_Classifier:
       self.NegList = []
       self.PosDic = {}
       self.NegDic = {}
+      self.PosBigramDic = {}
+      self.NegBigramDic = {}
       self.PosValues = 0.0
       self.NegValues = 0.0
-      if os.path.isfile("PosDic.txt") and os.path.isfile("NegDic.txt"):  # pickled files exist, load into memory
+      self.PosBigramValues = 0.0
+      self.NegBigramValues = 0.0
+      if os.path.isfile("PosDic.txt") and os.path.isfile("NegDic.txt") and os.path.isfile("PosBigramDic.txt") and os.path.isfile("NegBigramDic.txt"):  # pickled files exist, load into memory
          self.PosList = self.load("PosList.txt")
          self.NegList = self.load("NegList.txt")
          self.PosDic = self.load("PosDic.txt")
          self.NegDic = self.load("NegDic.txt")
+         self.PosBigramDic = self.load("PosBigramDic.txt")
+         self.NegBigramDic = self.load("NegBigramDic.txt")
       else:              # pickled files do no exist, train the system
          self.train()
 
@@ -41,6 +47,12 @@ class Bayes_Classifier:
       for i in xrange(len(self.NegDic.values())):
          self.NegValues += self.NegDic.values()[i]    # sum of NegDic values
       print self.NegValues
+      for i in xrange(len(self.PosBigramDic.values())):
+         self.PosBigramValues += self.PosBigramDic.values()[i]    # sum of PosDic values
+      print self.PosBigramValues
+      for i in xrange(len(self.NegBigramDic.values())):
+         self.NegBigramValues += self.NegBigramDic.values()[i]    # sum of NegDic values
+      print self.NegBigramValues
 
    def train(self):   
       """Trains the Naive Bayes Sentiment Classifier."""
@@ -52,21 +64,27 @@ class Bayes_Classifier:
       # parse file names, categorize them into two lists: Positive and Negative
       for i in xrange(len(IFileList)):
          if IFileList[i][7] == '1':
-            self.NegList.append(IFileList[i])
-         elif IFileList[i][7] == '5':
             self.PosList.append(IFileList[i])
+         elif IFileList[i][7] == '5':
+            self.NegList.append(IFileList[i])
       # put into two dictionaries: Positive and Negative
       self.makeDictionary(self.PosList,self.PosDic)
       self.makeDictionary(self.NegList,self.NegDic)
+      self.makeBigramDictionary(self.PosList,self.PosBigramDic)
+      self.makeBigramDictionary(self.NegList,self.NegBigramDic)
 
       print "PosList: " + str(len(self.PosList))
       print "NegList: " + str(len(self.NegList))
       print "PosDic: " + str(len(self.PosDic))
       print "NegDic: " + str(len(self.NegDic))
+      print "PosBigramDic: " + str(len(self.PosBigramDic))
+      print "NegBigramDic: " + str(len(self.NegBigramDic))
       self.save(self.PosList,"PosList.txt")
       self.save(self.NegList,"NegList.txt")
       self.save(self.PosDic,"PosDic.txt")
       self.save(self.NegDic,"NegDic.txt")
+      self.save(self.PosDic,"PosBigramDic.txt")
+      self.save(self.NegDic,"NegBigramDic.txt")
       print "Successfully saved"
 
    def makeDictionary(self,sublist,dic):
@@ -85,17 +103,33 @@ class Bayes_Classifier:
                dic.update(dic_add)
       return dic
 
+   def makeBigramDictionary(self,sublist,dic):
+      for i in xrange(len(sublist)):
+         s = self.loadFile("movies_reviews/"+sublist[i])
+         split = self.tokenize(s.lower())
+         bigrams = [(bigram[0].lower(), bigram[1].lower()) for bigram in nltk.bigrams(split)]
+         for j in xrange(len(bigrams)):
+            if dic.has_key(bigrams[j]):
+               dic[bigrams[j]] += 1
+            else:
+               dic_add={bigrams[j]:1}
+               dic.update(dic_add)
+      return dic
+
    def classify(self,sText):
       """Given a target string sText, this function returns the most likely document
       class to which the target string belongs (i.e., positive, negative or neutral).
       """
 
       wordlist = self.tokenize(sText.lower())
-      print wordlist
+      bigrams = [(bigram[0].lower(), bigram[1].lower()) for bigram in nltk.bigrams(wordlist)]
+      print bigrams
       #pos_prior = 0.0
       #neg_prior = 0.0
       pos_likelihood = 0.0
       neg_likelihood = 0.0
+      pos_bigram_likelihood = 0.0
+      neg_bigram_likelihood = 0.0
       p_pos = 0.0
       p_neg = 0.0
       # prior probability of class Positive
@@ -107,15 +141,19 @@ class Bayes_Classifier:
 
       pos_likelihood = self.cal_Likelihood(self.PosDic,wordlist)
       neg_likelihood = self.cal_Likelihood(self.NegDic,wordlist)
+      pos_bigram_likelihood = self.cal_Likelihood(self.PosBigramDic,bigrams)
+      neg_bigram_likelihood = self.cal_Likelihood(self.NegBigramDic,bigrams)
       print pos_likelihood
       print neg_likelihood
+      print pos_bigram_likelihood
+      print neg_bigram_likelihood
 
-      #p_pos = math.log(self.pos_prior)+pos_likelihood
-      #p_neg = math.log(self.neg_prior)+neg_likelihood
-      p_pos = pos_likelihood
-      p_neg = neg_likelihood
+      p_pos = math.log(self.pos_prior)+pos_likelihood
+      p_neg = math.log(self.neg_prior)+neg_likelihood
+      p_bigram_pos = math.log(self.pos_prior)+pos_bigram_likelihood
+      p_bigram_neg = math.log(self.neg_prior)+neg_bigram_likelihood
 
-      distance = p_pos - p_neg
+      distance = p_pos + p_bigram_pos - p_neg - p_bigram_neg
       if distance > 1:
          return "positive"
       elif distance < -1:
@@ -244,6 +282,24 @@ def segment(corpus, fold):
       for j in range(len(corpus)):
          sublist[j%fold].append(corpus[j])
       return sublist
-
+"""
 a = Bayes_Classifier()
+s = "This is beyond wretched. Gibson running around with his face painted blue makes me think he's trying to imitate some medieval Glasgow Rangers supporter. An embarrassment to anyone with any real concept of Scottish history or pride. "
+split = a.tokenize(s.lower())
+bigrams = [(bigram[0].lower(), bigram[1].lower()) for bigram in nltk.bigrams(split)]
+print bigrams
+stemmer = nltk.stem.LancasterStemmer()
+stems = [stemmer.stem(word).lower() for word in split]
+print stems
+"""
+
+
+
+
+
+
+
+
+
+
 
