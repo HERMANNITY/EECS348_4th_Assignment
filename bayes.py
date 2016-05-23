@@ -160,9 +160,9 @@ class Bayes_Classifier:
          predict = self.classify(s)
          g_truth_index = sublist[i][7]
          if g_truth_index == '1':
-            g_truth = "positive"
-         elif g_truth_index == '5':
             g_truth = "negative"
+         elif g_truth_index == '5':
+            g_truth = "positive"
 
          if predict == g_truth and predict == "positive":
             true_pos += 1
@@ -239,11 +239,12 @@ class Bayes_Classifier:
 def segment(corpus, fold):
       shuffle(corpus)
       sublist = []
-      for i in range(fold):
+      for i in xrange(fold):
          sublist.append([])
-      for j in range(len(corpus)):
+      for j in xrange(len(corpus)):
          sublist[j%fold].append(corpus[j])
       return sublist
 
-a = Bayes_Classifier()
-
+#a = Bayes_Classifier()
+#result = segment(a.PosList,10)
+#a.validation_helper(result[0])
