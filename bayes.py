@@ -115,13 +115,17 @@ class Bayes_Classifier:
       p_pos = pos_likelihood
       p_neg = neg_likelihood
 
-      distance = p_pos - p_neg
-      if distance > 1:
+      #distance = p_pos - p_neg
+      #if distance > 1:
+      #   return "positive"
+      #elif distance < -1:
+      #   return "negative"
+      #else:
+      #   return "neutral"
+      if p_pos >= p_neg:
          return "positive"
-      elif distance < -1:
-         return "negative"
       else:
-         return "neutral"
+         return "negative"
 
    def cal_Likelihood(self,dic,wordlist):
       total = 0.0

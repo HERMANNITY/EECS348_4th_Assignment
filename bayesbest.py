@@ -82,6 +82,8 @@ class Bayes_Classifier:
       print "NegDic: " + str(len(self.NegDic))
       print "PosBigramDic: " + str(len(self.PosBigramDic))
       print "NegBigramDic: " + str(len(self.NegBigramDic))
+
+      #save files
       self.save(self.PosList,"PosList.txt")
       self.save(self.NegList,"NegList.txt")
       self.save(self.PosDic,"PosDic.txt")
@@ -118,7 +120,8 @@ class Bayes_Classifier:
       for i in xrange(len(sublist)):
          s = self.loadFile("movies_reviews/"+sublist[i])
          split = self.tokenize(s.lower())
-         bigrams = [(bigram[0].lower(), bigram[1].lower()) for bigram in nltk.bigrams(split)]
+         # store a list of bigrams of split words
+         bigrams = [(bigram[0], bigram[1]) for bigram in nltk.bigrams(split)]
          for j in xrange(len(bigrams)):
             if dic.has_key(bigrams[j]):
                dic[bigrams[j]] += 1
@@ -132,15 +135,20 @@ class Bayes_Classifier:
       class to which the target string belongs (i.e., positive, negative or neutral).
       """
       s = self.tokenize(sText.lower())
-      bigrams = [(bigram[0].lower(), bigram[1].lower()) for bigram in nltk.bigrams(s)]
+      bigrams = [(bigram[0], bigram[1]) for bigram in nltk.bigrams(s)] # a list of bigrams tuples
       print bigrams
       stemmer = nltk.stem.LancasterStemmer()
-      wordlist = [stemmer.stem(word) for word in s]
+      wordlist = [stemmer.stem(word) for word in s]  # extract each word's stem, stored in wordlist
       #pos_prior = 0.0
       #neg_prior = 0.0
-      pos_likelihood = 0.0
+
+      # product of all conditional probabilities given class Positive, using stem
+      pos_likelihood = 0.0   
+      # product of all conditional probabilities given class Negative, using stem
       neg_likelihood = 0.0
-      pos_bigram_likelihood = 0.0
+      # product of all conditional probabilities given class Positive, using bigrams   
+      pos_bigram_likelihood = 0.0  
+      # product of all conditional probabilities given class Negative, using bigrams 
       neg_bigram_likelihood = 0.0
       p_pos = 0.0
       p_neg = 0.0
@@ -178,6 +186,7 @@ class Bayes_Classifier:
          return "negative"
 
    def cal_Likelihood(self,dic,wordlist):
+
       total = 0.0
       likelihood = 0.0
       #for i in xrange(len(dic.values())):
@@ -199,10 +208,10 @@ class Bayes_Classifier:
 
 
    def validation_helper(self,sublist):
-      true_pos = 0
-      true_neg = 0
-      false_pos = 0
-      false_neg = 0
+      true_pos = 0       # the number of true positive
+      true_neg = 0       # the number of true negative
+      false_pos = 0      # the number of false positive
+      false_neg = 0      # the number of false negative
       pos_precision = 0.0 
       pos_recall = 0.0
       pos_f_measure = 0.0
@@ -211,37 +220,37 @@ class Bayes_Classifier:
       neg_f_measure = 0.0
       for i in xrange(len(sublist)):
          s = self.loadFile("movies_reviews/"+sublist[i])
-         predict = self.classify(s)
-         g_truth_index = sublist[i][7]
+         predict = self.classify(s)       # predict the class according to the file's text
+         g_truth_index = sublist[i][7]    # the ground truth: according to the file's name
          if g_truth_index == '1':
             g_truth = "negative"
          elif g_truth_index == '5':
             g_truth = "positive"
 
-         if predict == g_truth and predict == "positive":
-            true_pos += 1
-         elif predict == g_truth and predict == "negative":
+         if predict == g_truth and predict == "positive":    
+            true_pos += 1       
+         elif predict == g_truth and predict == "negative":  
             true_neg += 1
-         elif predict != g_truth and predict == "positive":
+         elif predict != g_truth and predict == "positive":  
             false_pos += 1
-         elif predict != g_truth and predict == "negative":
+         elif predict != g_truth and predict == "negative":  
             false_neg += 1
       print true_pos
       print true_neg
       print false_pos
       print false_neg
       pos_precision = float(true_pos)/float(true_pos+false_pos)
-      #neg_precision = float(false_pos)/float(true_pos+false_pos)
+      neg_precision = float(true_neg)/float(true_neg+false_neg)
       pos_recall = float(true_pos)/float(true_pos+false_neg)
-      #neg_recall = float(true_neg)/float(true_neg+false_pos)
+      neg_recall = float(true_neg)/float(true_neg+false_pos)
       pos_f_measure = 2*pos_precision*pos_recall/(pos_precision+pos_recall)
-      #neg_f_measure = 2*neg_precision*neg_recall/(neg_precision+neg_recall)
+      neg_f_measure = 2*neg_precision*neg_recall/(neg_precision+neg_recall)
       print pos_precision
       print pos_recall
       print pos_f_measure 
-      #print neg_precision
-      #print neg_recall
-      #print neg_f_measure 
+      print neg_precision
+      print neg_recall
+      print neg_f_measure 
 
 
    def loadFile(self, sFilename):
@@ -290,13 +299,18 @@ class Bayes_Classifier:
       return lTokens
 
 def segment(corpus, fold):
-      shuffle(corpus)
-      sublist = []
-      for i in xrange(fold):
-         sublist.append([])
-      for j in xrange(len(corpus)):
-         sublist[j%fold].append(corpus[j])
-      return sublist
+   """
+   Given a list of files and a number as "fold",
+   It will split the files into several sublists averagely, the number of sublists is "fold",
+   Return a list of sublists
+   """
+   shuffle(corpus)
+   sublist = []
+   for i in xrange(fold):  
+      sublist.append([])
+   for j in xrange(len(corpus)):
+      sublist[j%fold].append(corpus[j])
+   return sublist
 
 a = Bayes_Classifier()
 IFileList = []
